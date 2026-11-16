@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui' as ui;
 
 import 'package:canvas_danmaku/danmaku_controller.dart';
 import 'package:canvas_danmaku/models/danmaku_content_item.dart';
@@ -163,37 +164,66 @@ class _DanmakuScreenState<T> extends State<DanmakuScreen<T>>
   }) {
     bool added = false;
 
-    final paragraph = DmUtils.generateParagraph(
-      content: content,
-      fontSize: _option.fontSize,
-      fontWeight: _option.fontWeight,
-    );
+    final double danmakuWidth;
+    final double danmakuHeight;
+    ui.Image? prebuiltImg;
+    ui.Paragraph? paragraph;
 
-    final danmakuWidth = (content.selfSend
-            ? paragraph.maxIntrinsicWidth + 4
-            : paragraph.maxIntrinsicWidth) +
-        _option.strokeWidth;
-    final danmakuHeight = paragraph.height + _option.strokeWidth;
+    if (content.emoteImage != null) {
+      final (img, w, h) = DmUtils.recordEmoteImage(
+        content: content,
+        fontSize: _option.fontSize,
+        strokeWidth: _option.strokeWidth,
+      );
+      prebuiltImg = img;
+      danmakuWidth = w;
+      danmakuHeight = h;
+    } else if (content.emotes != null && content.emotes!.isNotEmpty) {
+      final (img, w, h) = DmUtils.recordMixedDanmakuImage(
+        content: content,
+        fontSize: _option.fontSize,
+        fontWeight: _option.fontWeight,
+        strokeWidth: _option.strokeWidth,
+      );
+      prebuiltImg = img;
+      danmakuWidth = w;
+      danmakuHeight = h;
+    } else {
+      paragraph = DmUtils.generateParagraph(
+        content: content,
+        fontSize: _option.fontSize,
+        fontWeight: _option.fontWeight,
+      );
+      danmakuWidth = (content.selfSend
+              ? paragraph.maxIntrinsicWidth + 4
+              : paragraph.maxIntrinsicWidth) +
+          _option.strokeWidth;
+      danmakuHeight = paragraph.height + _option.strokeWidth;
+    }
 
     if (!scroll &&
         content.type != DanmakuItemType.scroll &&
         _option.static2Scroll &&
         danmakuWidth > _viewWidth) {
+      prebuiltImg?.dispose();
+      paragraph?.dispose();
       return false;
     }
 
     DanmakuItem<T> getItem() => DanmakuItem<T>(
-        xPosition: _viewWidth,
-        width: danmakuWidth,
-        height: danmakuHeight,
-        content: content,
-        image: DmUtils.recordDanmakuImage(
-          contentParagraph: paragraph,
+          xPosition: _viewWidth,
+          width: danmakuWidth,
+          height: danmakuHeight,
           content: content,
-          fontSize: _option.fontSize,
-          fontWeight: _option.fontWeight,
-          strokeWidth: _option.strokeWidth,
-        ));
+          image: prebuiltImg ??
+              DmUtils.recordDanmakuImage(
+                contentParagraph: paragraph!,
+                content: content,
+                fontSize: _option.fontSize,
+                fontWeight: _option.fontWeight,
+                strokeWidth: _option.strokeWidth,
+              ),
+        );
 
     for (var i = 0; i < _trackCount; i++) {
       final index =
@@ -225,10 +255,12 @@ class _DanmakuScreenState<T> extends State<DanmakuScreen<T>>
           _option.massiveMode) {
         _scrollDanmakuItems[_random.nextInt(_trackCount)].add(getItem());
         added = true;
+      } else {
+        prebuiltImg?.dispose();
       }
     }
 
-    paragraph.dispose();
+    paragraph?.dispose();
     return added;
   }
 
@@ -258,14 +290,15 @@ class _DanmakuScreenState<T> extends State<DanmakuScreen<T>>
         added = true;
         _specialDanmakuItems.add(
           DanmakuItem<T>(
-              width: 0,
-              height: 0,
-              content: content,
-              image: DmUtils.recordSpecialDanmakuImg(
-                content: content as SpecialDanmakuContentItem,
-                fontWeight: _option.fontWeight,
-                strokeWidth: _option.strokeWidth,
-              )),
+            width: 0,
+            height: 0,
+            content: content,
+            image: DmUtils.recordSpecialDanmakuImg(
+              content: content as SpecialDanmakuContentItem,
+              fontWeight: _option.fontWeight,
+              strokeWidth: _option.strokeWidth,
+            ),
+          ),
         );
         if (_running && !_ticker.isActive) {
           _ticker.start();
