@@ -54,23 +54,44 @@ class DanmakuItem<T> {
     double strokeWidth,
   ) {
     if (image == null) {
-      final paragraph = DmUtils.generateParagraph(
-        content: content,
-        fontSize: fontSize,
-        fontWeight: fontWeight,
-      );
-      image = DmUtils.recordDanmakuImage(
-        contentParagraph: paragraph,
-        content: content,
-        fontSize: fontSize,
-        fontWeight: fontWeight,
-        strokeWidth: strokeWidth,
-      );
-      width = paragraph.maxIntrinsicWidth +
-          strokeWidth +
-          (content.selfSend ? 4.0 : 0.0);
-      height = paragraph.height + strokeWidth;
-      paragraph.dispose();
+      if (content.emoteImage != null) {
+        final (img, w, h) = DmUtils.recordEmoteImage(
+          content: content,
+          fontSize: fontSize,
+          strokeWidth: strokeWidth,
+        );
+        image = img;
+        width = w;
+        height = h;
+      } else if (content.emotes != null && content.emotes!.isNotEmpty) {
+        final (img, w, h) = DmUtils.recordMixedDanmakuImage(
+          content: content,
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          strokeWidth: strokeWidth,
+        );
+        image = img;
+        width = w;
+        height = h;
+      } else {
+        final paragraph = DmUtils.generateParagraph(
+          content: content,
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+        );
+        image = DmUtils.recordDanmakuImage(
+          contentParagraph: paragraph,
+          content: content,
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          strokeWidth: strokeWidth,
+        );
+        width = paragraph.maxIntrinsicWidth +
+            strokeWidth +
+            (content.selfSend ? 4.0 : 0.0);
+        height = paragraph.height + strokeWidth;
+        paragraph.dispose();
+      }
     }
   }
 
